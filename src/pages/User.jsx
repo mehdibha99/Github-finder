@@ -4,8 +4,11 @@ import { useParams } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { FaCodepen, FaStore, FaUserFriends, FaUser } from "react-icons/fa";
 import Spinner from "../components/layout/Spinner";
+import ReposList from "../components/Repos/ReposList";
+import UserDialog from "../components/Follow/UserDialog";
 function User() {
-  const { user, getUser, loading } = useContext(GithubContext);
+  const { user, getUser, loading, repos, searchRepos, searchFollow } =
+    useContext(GithubContext);
   const params = useParams();
   const {
     name,
@@ -25,7 +28,11 @@ function User() {
   } = user;
   useEffect(() => {
     getUser(params.login);
-  }, []);
+    searchRepos(params.login);
+    searchFollow(params.login, "following");
+    searchFollow(params.login, "followers");
+  }, [params.login]);
+
   if (loading) return <Spinner />;
   return (
     <>
@@ -117,9 +124,43 @@ function User() {
             <div className="stat-figure text-secondary">
               <FaUserFriends className="text-3xl md:text-5xl" />
             </div>
-            <div className="stat-title pr-5">Followers</div>
+            <div
+              className="stat-title pr-5 cursor-pointer"
+              onClick={() => {
+                document.getElementById("modal_1").showModal();
+              }}
+            >
+              Followers
+            </div>
+            <UserDialog
+              text={"followers"}
+              login={params.login}
+              id={"modal_1"}
+            />
             <div className="stat-value pr-4 text-3xl md:text-4xl">
               {followers}
+            </div>
+          </div>
+
+          <div className="stat">
+            <div className="stat-figure text-secondary">
+              <FaUser className="text-3xl md:text-5xl" />
+            </div>
+            <div
+              className="stat-title pr-5 cursor-pointer"
+              onClick={() => {
+                document.getElementById("modal_2").showModal();
+              }}
+            >
+              Following
+            </div>
+            <UserDialog
+              text={"following"}
+              login={params.login}
+              id={"modal_2"}
+            />
+            <div className="stat-value pr-4 text-3xl md:text-4xl">
+              {following}
             </div>
           </div>
 
@@ -135,16 +176,6 @@ function User() {
 
           <div className="stat">
             <div className="stat-figure text-secondary">
-              <FaUser className="text-3xl md:text-5xl" />
-            </div>
-            <div className="stat-title pr-5">Following</div>
-            <div className="stat-value pr-4 text-3xl md:text-4xl">
-              {following}
-            </div>
-          </div>
-
-          <div className="stat">
-            <div className="stat-figure text-secondary">
               <FaStore className="text-3xl md:text-5xl" />
             </div>
             <div className="stat-title pr-5">Public Gists</div>
@@ -153,6 +184,7 @@ function User() {
             </div>
           </div>
         </div>
+        <ReposList repos={repos} />
       </div>
     </>
   );

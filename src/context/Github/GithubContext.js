@@ -8,7 +8,10 @@ export const GithubProvider = ({ children }) => {
   const initialState = {
     usersList: [],
     user: {},
+    repos: [],
     loading: false,
+    following: [],
+    followers: [],
   };
 
   const [state, dispatch] = useReducer(GithubReducer, initialState);
@@ -19,7 +22,7 @@ export const GithubProvider = ({ children }) => {
   const setLoading = () => {
     dispatch({ type: "SET_LOADING" });
   };
-
+  //search for user with key word
   const searchUsers = async (text) => {
     setLoading();
 
@@ -60,15 +63,64 @@ export const GithubProvider = ({ children }) => {
     }
   };
 
+  //return all the repo for single user
+  const searchRepos = async (login) => {
+    setLoading();
+
+    const params = new URLSearchParams({
+      per_page: 10,
+    });
+
+    const Response = await fetch(
+      `${GITHUB_URL}/users/${login}/repos?${params}`,
+      {
+        headers: {
+          authorization: `token ${GITHUB_TOKEN}`,
+        },
+      }
+    );
+
+    const data = await Response.json();
+    dispatch({
+      type: "GET_REPOS",
+      payload: data,
+    });
+  };
+
+  //get following or followers for single user
+  const searchFollow = async (login, text) => {
+    setLoading();
+
+    const Response = await fetch(`${GITHUB_URL}/users/${login}/${text}`, {
+      headers: {
+        authorization: `token ${GITHUB_TOKEN}`,
+      },
+    });
+
+    const data = await Response.json();
+
+    if (text === "following") {
+      dispatch({
+        type: "GET_FOLLOWING",
+        payload: data,
+      });
+    } else if (text === "followers") {
+      dispatch({
+        type: "GET_FOLLOWERS",
+        payload: data,
+      });
+    }
+  };
+
   return (
     <GithubContext.Provider
       value={{
-        loading: state.loading,
-        usersList: state.usersList,
-        user: state.user,
+        ...state,
         searchUsers,
         cleanUsersList,
         getUser,
+        searchRepos,
+        searchFollow,
       }}
     >
       {children}
