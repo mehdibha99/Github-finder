@@ -1,5 +1,6 @@
 import { createContext, useReducer } from "react";
 import GithubReducer from "./GithubReducer";
+import axios from "axios";
 export const GithubContext = createContext();
 
 export const GithubProvider = ({ children }) => {
@@ -13,6 +14,12 @@ export const GithubProvider = ({ children }) => {
     following: [],
     followers: [],
   };
+  const github = axios.create({
+    baseURL: GITHUB_URL,
+    headers: {
+      authorization: `token ${GITHUB_TOKEN}`,
+    },
+  });
 
   const [state, dispatch] = useReducer(GithubReducer, initialState);
   const cleanUsersList = () => {
@@ -30,84 +37,54 @@ export const GithubProvider = ({ children }) => {
       q: text,
     });
 
-    const Response = await fetch(`${GITHUB_URL}/search/users?${params}`, {
-      headers: {
-        authorization: `token ${GITHUB_TOKEN}`,
-      },
-    });
-    const { items } = await Response.json();
+    const Response = await github.get(`/search/users?${params}`);
     dispatch({
       type: "GET_USERS",
-      payload: items,
+      payload: Response.data.items,
     });
   };
 
-  //get User
-  const getUser = async (login) => {
+  //get User and Repo
+  const getUserAndRepo = async (login) => {
     setLoading();
-
-    const Response = await fetch(`${GITHUB_URL}/users/${login}`, {
-      headers: {
-        authorization: `token ${GITHUB_TOKEN}`,
-      },
-    });
-
-    if (Response.status === 404) {
-      window.location.replace("NotFound");
-    } else {
-      const data = await Response.json();
-      dispatch({
-        type: "GET_USER",
-        payload: data,
-      });
-    }
-  };
-
-  //return all the repo for single user
-  const searchRepos = async (login) => {
-    setLoading();
-
     const params = new URLSearchParams({
       per_page: 10,
     });
 
-    const Response = await fetch(
-      `${GITHUB_URL}/users/${login}/repos?${params}`,
-      {
-        headers: {
-          authorization: `token ${GITHUB_TOKEN}`,
-        },
-      }
-    );
+    const [user, repos] = await Promise.all([
+      github.get(`/users/${login}`),
+      github.get(`${GITHUB_URL}/users/${login}/repos?${params}`),
+    ]);
 
-    const data = await Response.json();
-    dispatch({
-      type: "GET_REPOS",
-      payload: data,
-    });
+    if (user.status === 404) {
+      window.location.replace("NotFound");
+    } else {
+      dispatch({
+        type: "GET_USER_AND_REPO",
+        payload: { user: user.data, repos: repos.data },
+      });
+      dispatch({
+        type: "GET_REPOS",
+        payload: repos.data,
+      });
+    }
   };
 
   //get following or followers for single user
   const searchFollow = async (login, text) => {
     setLoading();
 
-    const Response = await fetch(`${GITHUB_URL}/users/${login}/${text}`, {
-      headers: {
-        authorization: `token ${GITHUB_TOKEN}`,
-      },
-    });
-
-    const data = await Response.json();
+    const Response = await github.get(`/users/${login}/${text}`);
 
     if (text === "following") {
       dispatch({
         type: "GET_FOLLOWING",
-        payload: data,
+        payload: Response.data,
       });
     } else if (text === "followers") {
       dispatch({
         type: "GET_FOLLOWERS",
-        payload: data,
+        payload: Response.data,
       });
     }
   };
@@ -118,8 +95,7 @@ export const GithubProvider = ({ children }) => {
         ...state,
         searchUsers,
         cleanUsersList,
-        getUser,
-        searchRepos,
+        getUserAndRepo,
         searchFollow,
       }}
     >

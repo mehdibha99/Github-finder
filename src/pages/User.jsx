@@ -7,7 +7,7 @@ import Spinner from "../components/layout/Spinner";
 import ReposList from "../components/Repos/ReposList";
 import UserDialog from "../components/Follow/UserDialog";
 function User() {
-  const { user, getUser, loading, repos, searchRepos, searchFollow } =
+  const { user, getUserAndRepo, loading, repos, searchFollow } =
     useContext(GithubContext);
   const params = useParams();
   const {
@@ -27,8 +27,7 @@ function User() {
     hireable,
   } = user;
   useEffect(() => {
-    getUser(params.login);
-    searchRepos(params.login);
+    getUserAndRepo(params.login);
     searchFollow(params.login, "following");
     searchFollow(params.login, "followers");
   }, [params.login]);
